@@ -38,7 +38,7 @@ FinUnion Group работает с физическими и юридическ�
 |Каталог данных|Нет|Нет|Нет прозрачного lineage и владельцев данных|
 
 Как отправную точку для анализа можно использовать As-Is-диаграмму:
-![AS-IS-FinUnion___RetailBank_AS_IS.png](AS-IS-FinUnion___RetailBank_AS_IS.png)
+![AS-IS-FinUnion___RetailBank_AS_IS.png](images/AS-IS-FinUnion___RetailBank_AS_IS.png)
 Исходный файл [AS-IS.puml](AS-IS.puml)
 
 ### Стартовые данные и ограничения
