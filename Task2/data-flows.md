@@ -1,6 +1,7 @@
 # Основные потоки данных
 
 Диаграмма промежуточного состояния: [`diagrams/data-flow-level-0.mmd`](diagrams/data-flow-level-0.mmd).
+![data-flow-level-0.png](diagrams/data-flow-level-0.png)
 
 ## Принципы
 
