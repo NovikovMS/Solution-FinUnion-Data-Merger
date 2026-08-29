@@ -1,7 +1,8 @@
 # Логическая модель данных
 
-Исходник ER-диаграммы: [`diagrams/logical-data-model.puml`](diagrams/logical-data-model.puml).
-![logical-data-model-FinUnion___RetailBank_____.png](diagrams/logical-data-model-FinUnion___RetailBank_____.png)
+Исходник ER-диаграммы: [`diagrams/logical-data-model.mmd`](diagrams/logical-data-model.mmd).
+
+Диаграмма переведена на Mermaid и ориентирована слева направо. Количество связей сокращено до ключевых, чтобы линии не перекрывали сущности. Дополнительные смысловые связи описаны текстом ниже.
 
 Модель описывает единый бизнес-язык объединённого банка. Это не физическая схема конкретной БД: типы данных и ключи показывают требуемую семантику, но не назначают конкретные мастер-системы.
 

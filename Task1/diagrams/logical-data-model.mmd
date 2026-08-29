@@ -1,0 +1,144 @@
+erDiagram
+    direction LR
+
+    CUSTOMER["Клиент"] {
+        uuid customer_id PK
+        string customer_type
+        string full_name
+        string tax_id
+        string kyc_status
+    }
+
+    APPLICATION["Заявка"] {
+        uuid application_id PK
+        uuid customer_id FK
+        uuid product_id FK
+        string status
+        string decision
+    }
+
+    CONSENT["Согласие"] {
+        uuid consent_id PK
+        uuid customer_id FK
+        string purpose_code
+        datetime granted_at
+        datetime withdrawn_at
+    }
+
+    CUSTOMER_CASE["Обращение"] {
+        uuid case_id PK
+        uuid customer_id FK
+        string category
+        string status
+        datetime opened_at
+    }
+
+    DOCUMENT["Документ"] {
+        uuid document_id PK
+        uuid customer_id FK
+        string document_type
+        string object_uri
+        string content_hash
+    }
+
+    PRODUCT["Продукт"] {
+        uuid product_id PK
+        string product_code
+        string product_name
+        string product_group
+        string status
+    }
+
+    AGREEMENT["Договор"] {
+        uuid agreement_id PK
+        uuid customer_id FK
+        uuid product_id FK
+        string agreement_number
+        string status
+    }
+
+    ACCOUNT["Счёт"] {
+        uuid account_id PK
+        uuid customer_id FK
+        uuid agreement_id FK
+        string account_number
+        string currency_code
+        decimal balance
+        string status
+    }
+
+    CARD["Карта"] {
+        uuid card_id PK
+        uuid customer_id FK
+        uuid account_id FK
+        string pan_token
+        string status
+    }
+
+    LOAN["Кредит"] {
+        uuid loan_id PK
+        uuid customer_id FK
+        uuid agreement_id FK
+        uuid account_id FK
+        decimal outstanding_amount
+        string status
+    }
+
+    PAYMENT["Платёж"] {
+        uuid payment_id PK
+        uuid payer_account_id FK
+        uuid counterparty_id FK
+        decimal amount
+        string currency_code
+        string execution_status
+    }
+
+    TRANSACTION["Операция"] {
+        uuid transaction_id PK
+        uuid account_id FK
+        uuid payment_id FK
+        uuid card_id FK
+        decimal amount
+        datetime posted_at
+        string status
+    }
+
+    COUNTERPARTY["Контрагент"] {
+        uuid counterparty_id PK
+        string counterparty_type
+        string display_name
+        string bank_details
+    }
+
+    REFERENCE_ITEM["Справочное значение"] {
+        uuid reference_item_id PK
+        string reference_set
+        string canonical_code
+        string fu_code
+        string rb_code
+    }
+
+    CUSTOMER ||--o{ APPLICATION : "подаёт"
+    CUSTOMER ||--o{ CONSENT : "предоставляет"
+    CUSTOMER ||--o{ CUSTOMER_CASE : "создаёт"
+    CUSTOMER ||--o{ DOCUMENT : "подтверждается"
+    CUSTOMER ||--o{ AGREEMENT : "заключает"
+    CUSTOMER ||--o{ ACCOUNT : "владеет"
+
+    PRODUCT ||--o{ APPLICATION : "запрашивается"
+    PRODUCT ||--o{ AGREEMENT : "определяет условия"
+    APPLICATION |o--o| AGREEMENT : "завершается"
+    AGREEMENT ||--o{ ACCOUNT : "открывает"
+    AGREEMENT ||--o{ CARD : "регулирует"
+    AGREEMENT ||--o| LOAN : "регулирует"
+
+    ACCOUNT ||--o{ CARD : "обслуживает"
+    ACCOUNT ||--o{ LOAN : "обслуживает"
+    ACCOUNT ||--o{ PAYMENT : "источник средств"
+    ACCOUNT ||--o{ TRANSACTION : "учитывает"
+
+    PAYMENT |o--o{ TRANSACTION : "порождает"
+    CARD |o--o{ TRANSACTION : "инициирует"
+    COUNTERPARTY |o--o{ PAYMENT : "участвует"
+
+    REFERENCE_ITEM }o..o{ PRODUCT : "нормализует коды"
