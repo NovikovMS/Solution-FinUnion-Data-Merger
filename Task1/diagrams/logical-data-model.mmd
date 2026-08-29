@@ -167,3 +167,6 @@ erDiagram
 
     REFERENCE_ITEM }o..o{ PRODUCT : "нормализует коды"
 
+    LEGEND_ONE_LEFT ||--|| LEGEND_ONE_RIGHT : "один к одному"
+    LEGEND_OPTIONAL |o--o{ LEGEND_MANY : "ноль или один к множеству"
+    LEGEND_MAIN ||..o{ LEGEND_REFERENCE : "справочная зависимость"
