@@ -1,0 +1,70 @@
+flowchart TB
+    subgraph producers["Источники"]
+        direction LR
+        OLTP["Core · Cards · Loans"]
+        CRM["CRM"]
+        MASTER["MDM · RDM · Product Catalog"]
+        DOCS["Document Management"]
+        ARCHIVE["FU/RB архивы"]
+    end
+
+    subgraph ingestion["Ingestion"]
+        direction LR
+        KAFKA["Kafka"]
+        CDC["CDC Connectors"]
+        FILES["Managed File Ingestion"]
+    end
+
+    subgraph lakehouse["Iceberg Lakehouse"]
+        direction LR
+        RAW["Raw"]
+        STANDARD["Standardized"]
+        CURATED["Curated"]
+    end
+
+    subgraph serving["Serving"]
+        direction LR
+        DWH["PostgreSQL DWH"]
+        TRINO["Trino"]
+        BI["BI / Reporting"]
+        DS["Risk / Anti-fraud"]
+    end
+
+    subgraph control["Управление"]
+        direction LR
+        AIRFLOW["Airflow"]
+        QUALITY["Data Quality Gate"]
+        DATAHUB["DataHub"]
+    end
+
+    OLTP --> CDC
+    OLTP --> KAFKA
+    CRM --> KAFKA
+    MASTER --> KAFKA
+    DOCS --> FILES
+    ARCHIVE --> FILES
+
+    CDC --> RAW
+    KAFKA --> RAW
+    FILES --> RAW
+
+    RAW --> STANDARD
+    STANDARD --> CURATED
+    CURATED --> QUALITY
+    QUALITY --> DWH
+    CURATED --> TRINO
+
+    DWH --> BI
+    TRINO --> DS
+
+    AIRFLOW -.-> FILES
+    AIRFLOW -.-> RAW
+    AIRFLOW -.-> STANDARD
+    AIRFLOW -.-> CURATED
+    AIRFLOW -.-> DWH
+
+    CDC -.-> DATAHUB
+    KAFKA -.-> DATAHUB
+    AIRFLOW -.-> DATAHUB
+    CURATED -.-> DATAHUB
+    DWH -.-> DATAHUB
