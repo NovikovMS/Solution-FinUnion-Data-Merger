@@ -1,0 +1,240 @@
+@startuml
+title FinUnion + RetailBank — логическая модель ключевых данных
+
+hide methods
+hide stereotypes
+skinparam linetype ortho
+
+entity "Клиент" as Customer {
+  * customer_id : UUID <<PK>>
+  --
+  customer_type : code
+  full_name : string
+  tax_id : string
+  identity_document : protected
+  contact_data : protected
+  kyc_status : code
+  source_ids : map
+}
+
+entity "Счёт" as Account {
+  * account_id : UUID <<PK>>
+  --
+  * customer_id : UUID <<FK>>
+  * agreement_id : UUID <<FK>>
+  account_number : protected
+  currency_code : code
+  account_type : code
+  balance : money
+  status : code
+}
+
+entity "Договор" as Agreement {
+  * agreement_id : UUID <<PK>>
+  --
+  * customer_id : UUID <<FK>>
+  * product_id : UUID <<FK>>
+  agreement_number : protected
+  agreement_type : code
+  valid_from : date
+  valid_to : date
+  status : code
+  terms_version : string
+}
+
+entity "Продукт" as Product {
+  * product_id : UUID <<PK>>
+  --
+  product_code : string
+  product_name : string
+  product_group : code
+  tariff_version : string
+  valid_from : date
+  valid_to : date
+  status : code
+}
+
+entity "Карта" as Card {
+  * card_id : UUID <<PK>>
+  --
+  * customer_id : UUID <<FK>>
+  * account_id : UUID <<FK>>
+  * agreement_id : UUID <<FK>>
+  pan_token : protected
+  payment_system : code
+  expiry_date : date
+  status : code
+}
+
+entity "Кредит" as Loan {
+  * loan_id : UUID <<PK>>
+  --
+  * customer_id : UUID <<FK>>
+  * agreement_id : UUID <<FK>>
+  * account_id : UUID <<FK>>
+  principal : money
+  interest_rate : decimal
+  outstanding_amount : money
+  overdue_amount : money
+  maturity_date : date
+  status : code
+}
+
+entity "Платёж" as Payment {
+  * payment_id : UUID <<PK>>
+  --
+  * payer_account_id : UUID <<FK>>
+  counterparty_id : UUID <<FK>>
+  amount : money
+  currency_code : code
+  purpose : protected
+  created_at : datetime
+  execution_status : code
+  external_id : string
+}
+
+entity "Операция" as Transaction {
+  * transaction_id : UUID <<PK>>
+  --
+  * account_id : UUID <<FK>>
+  payment_id : UUID <<FK>>
+  card_id : UUID <<FK>>
+  counterparty_id : UUID <<FK>>
+  transaction_type : code
+  debit_credit : code
+  amount : money
+  event_at : datetime
+  posted_at : datetime
+  status : code
+}
+
+entity "Обращение" as CustomerCase {
+  * case_id : UUID <<PK>>
+  --
+  * customer_id : UUID <<FK>>
+  related_object_type : code
+  related_object_id : UUID
+  channel : code
+  category : code
+  summary : protected
+  opened_at : datetime
+  closed_at : datetime
+  status : code
+}
+
+entity "Заявка" as Application {
+  * application_id : UUID <<PK>>
+  --
+  * customer_id : UUID <<FK>>
+  * product_id : UUID <<FK>>
+  resulting_agreement_id : UUID <<FK>>
+  channel : code
+  requested_at : datetime
+  decision : code
+  status : code
+}
+
+entity "Согласие" as Consent {
+  * consent_id : UUID <<PK>>
+  --
+  * customer_id : UUID <<FK>>
+  application_id : UUID <<FK>>
+  purpose_code : code
+  text_version : string
+  granted_at : datetime
+  withdrawn_at : datetime
+  valid_to : datetime
+  status : code
+}
+
+entity "Документ" as Document {
+  * document_id : UUID <<PK>>
+  --
+  * customer_id : UUID <<FK>>
+  related_object_type : code
+  related_object_id : UUID
+  document_type : code
+  object_uri : string
+  content_hash : string
+  valid_to : date
+  verification_status : code
+}
+
+entity "Контрагент" as Counterparty {
+  * counterparty_id : UUID <<PK>>
+  --
+  counterparty_type : code
+  display_name : protected
+  tax_or_registration_id : protected
+  bank_details : protected
+  country_code : code
+  risk_flags : code[]
+}
+
+entity "Справочное значение" as ReferenceItem {
+  * reference_item_id : UUID <<PK>>
+  --
+  * reference_set : string
+  * canonical_code : string
+  canonical_name : string
+  fu_code : string
+  rb_code : string
+  valid_from : date
+  valid_to : date
+  status : code
+}
+
+Customer ||--o{ Agreement : заключает
+Customer ||--o{ Account : владеет
+Customer ||--o{ Card : держатель
+Customer ||--o{ Loan : заёмщик
+Customer ||--o{ CustomerCase : создаёт
+Customer ||--o{ Application : подаёт
+Customer ||--o{ Consent : предоставляет
+Customer ||--o{ Document : подтверждается
+
+Product ||--o{ Agreement : определяет условия
+Product ||--o{ Application : запрашивается
+Agreement ||--o{ Account : открывает
+Agreement ||--o{ Card : регулирует выпуск
+Agreement ||--o| Loan : регулирует кредит
+Application |o--o| Agreement : завершается
+Application |o--o{ Consent : требует
+
+Account ||--o{ Card : обслуживает
+Account ||--o{ Transaction : учитывает
+Account ||--o{ Payment : источник средств
+Account ||--o{ Loan : обслуживает
+Payment |o--o{ Transaction : порождает
+Card |o--o{ Transaction : инициирует
+Counterparty |o--o{ Payment : получает или отправляет
+Counterparty |o--o{ Transaction : участвует
+
+CustomerCase }o..o| Agreement : может относиться
+CustomerCase }o..o| Account : может относиться
+CustomerCase }o..o| Payment : может относиться
+CustomerCase }o..o| Card : может относиться
+CustomerCase }o..o| Loan : может относиться
+Document }o..o| Agreement : подтверждает
+Document }o..o| Application : прилагается
+Document }o..o| Consent : доказывает
+
+ReferenceItem ..> Customer : нормализует коды
+ReferenceItem ..> Product : нормализует коды
+ReferenceItem ..> Account : нормализует коды
+ReferenceItem ..> Payment : нормализует коды
+ReferenceItem ..> Transaction : нормализует коды
+ReferenceItem ..> CustomerCase : нормализует коды
+
+note bottom of Transaction
+  Платёж — распоряжение и его жизненный цикл.
+  Операция — финансовый факт или проводка.
+  Один платёж может породить несколько операций.
+end note
+
+note bottom of Customer
+  source_ids сохраняет локальные ключи FU/RB.
+  Сопоставление нужно для lineage и обратной трассировки.
+end note
+
+@enduml
