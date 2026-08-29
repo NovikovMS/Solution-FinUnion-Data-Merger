@@ -1,0 +1,69 @@
+flowchart TB
+    subgraph sources["Системы-источники"]
+        direction LR
+
+        subgraph fu["FinUnion"]
+            direction TB
+            FU_CRM["FU CRM"]
+            FU_CORE["FU Core Banking"]
+            FU_CARDS["FU Card Processing"]
+            FU_LOANS["FU Loan System"]
+            FU_FEED["FU Data Feed"]
+
+            FU_CRM --> FU_FEED
+            FU_CORE --> FU_FEED
+            FU_CARDS --> FU_FEED
+            FU_LOANS --> FU_FEED
+        end
+
+        subgraph rb["RetailBank"]
+            direction TB
+            RB_CRM["RB CRM"]
+            RB_CORE["RB Core Banking"]
+            RB_CARDS["RB Card Processing"]
+            RB_LOANS["RB Loan System"]
+            RB_FEED["RB Data Feed"]
+
+            RB_CRM --> RB_FEED
+            RB_CORE --> RB_FEED
+            RB_CARDS --> RB_FEED
+            RB_LOANS --> RB_FEED
+        end
+    end
+
+    subgraph data_management["Интеграция и управление данными"]
+        direction LR
+        MDM["MDM Customer Hub"]
+        INT["Integration Layer"]
+        RDM["Reference Data Management"]
+        CATALOG["DataHub / каталог данных"]
+
+        INT -->|"Validate · Enrich<br/>клиент и локальные ID"| MDM
+        MDM -->|"Read<br/>глобальный customer_id"| INT
+        RDM -->|"Read · Validate<br/>канонические справочники"| INT
+
+        INT -.->|"Схемы · lineage<br/>метрики качества"| CATALOG
+        MDM -.->|"Golden record<br/>правила матчинга"| CATALOG
+        RDM -.->|"Версии справочников<br/>владельцы"| CATALOG
+    end
+
+    subgraph analytics["Аналитический контур"]
+        direction LR
+        DWH["Объединённый DWH"]
+        BI["BI"]
+        REGULATOR["Регуляторная отчётность"]
+
+        DWH -->|"Read<br/>витрины и метрики"| BI
+        DWH -->|"Read · Aggregate<br/>регламентные наборы"| REGULATOR
+    end
+
+    FU_FEED -->|"Create · Update · Read<br/>Delete — отзыв согласия<br/>Async · CDC"| INT
+    RB_FEED -->|"Create · Update · Read<br/>Delete — отзыв согласия<br/>Async · CDC"| INT
+
+    INT -->|"Update<br/>глобальный customer_id"| FU_CRM
+    INT -->|"Update<br/>глобальный customer_id"| RB_CRM
+
+    INT -->|"Validate · Aggregate<br/>канонические сущности<br/>Batch · CDC"| DWH
+    DWH -.->|"Витрины · lineage"| CATALOG
+
+    LEGEND["Действия<br/>Create · Read · Update · Delete<br/>Enrich · Validate · Aggregate<br/><br/>Режимы<br/>Async · CDC · Batch"]
