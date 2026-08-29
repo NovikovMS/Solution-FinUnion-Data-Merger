@@ -118,6 +118,30 @@ erDiagram
         string rb_code
     }
 
+    LEGEND_ONE_LEFT["Ровно один"] {
+        string marker "||"
+    }
+
+    LEGEND_ONE_RIGHT["Ровно один"] {
+        string marker "||"
+    }
+
+    LEGEND_OPTIONAL["Ноль или один"] {
+        string marker "|o"
+    }
+
+    LEGEND_MANY["Ноль или много"] {
+        string marker "o{"
+    }
+
+    LEGEND_MAIN["Исходная сущность"] {
+        string line "пунктир"
+    }
+
+    LEGEND_REFERENCE["Зависимая сущность"] {
+        string line "пунктир"
+    }
+
     CUSTOMER ||--o{ APPLICATION : "подаёт"
     CUSTOMER ||--o{ CONSENT : "предоставляет"
     CUSTOMER ||--o{ CUSTOMER_CASE : "создаёт"
@@ -142,3 +166,4 @@ erDiagram
     COUNTERPARTY |o--o{ PAYMENT : "участвует"
 
     REFERENCE_ITEM }o..o{ PRODUCT : "нормализует коды"
+
