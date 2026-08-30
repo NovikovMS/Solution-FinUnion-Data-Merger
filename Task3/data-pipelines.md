@@ -102,3 +102,81 @@ Airflow загружает файлы в отдельный raw namespace, пр�
 - DLQ используется для транспортных ошибок, карантин — для ошибок смысла и качества.
 - DataHub получает lineage от source dataset до data product, DWH-таблицы и BI-витрины.
 - Backfill использует отдельный resource pool и не вытесняет ежедневные критические загрузки.
+
+## Exit criteria для промежуточного P01
+
+P01 не должен незаметно стать постоянным прямым ETL из источников в DWH. Его вывод из эксплуатации выполняется по доменам.
+
+| Критерий | Условие завершения P01 для домена |
+|---|---|
+| Полнота ingestion | CDC или события стабильно поступают в raw и проходят сверку с источником |
+| Каноническая схема | Standardized содержит глобальные идентификаторы, `source_domain`, business date и коды RDM |
+| Curated data product | Назначены Owner и Steward, опубликован контракт и quality SLO |
+| Воспроизводимость | DWH batch можно повторно построить из зафиксированного Iceberg snapshot |
+| Lineage | DataHub показывает путь source → raw → standardized → curated → DWH |
+| Параллельный прогон | P01 и P09 дают одинаковые record count и финансовые суммы в согласованном окне |
+| Переключение | Consumer подтверждает новую поставку, а прямой source-to-DWH job выключается |
+
+Если критерии не выполнены, P01 продолжает работу только для конкретного домена. Это не блокирует перевод остальных доменов.
+
+## Правило CDC и доменных событий
+
+Одна бизнес-операция может появиться и в CDC, и в Kafka. Чтобы не получить двойной факт, для каждого типа данных назначается канонический путь.
+
+| Данные | Канонический источник | Вторичный источник | Правило |
+|---|---|---|---|
+| Платёжное распоряжение | Доменное событие Payment Service | CDC operational tables | Событие задаёт бизнес-смысл.<br><br>CDC используется для восстановления и технической сверки |
+| Бухгалтерская операция | Accounting Ledger CDC или ledger event с единым source key | События продукта | В curated допускается одна запись по `source_system + transaction_id + version` |
+| Карточная авторизация | Card event | CDC карточной БД | Event является near-line источником.<br><br>CDC подтверждает полноту |
+| Кредитный snapshot | Регламентный snapshot с `portfolio_snapshot_id` | CDC изменений | Snapshot является certified состоянием на business date.<br><br>CDC обслуживает intraday |
+| Golden record | Версионированное событие MDM | CDC MDM tables | Повторная доставка не запускает новый match/merge |
+
+Dedup выполняется в standardized по source key, версии и типу события. Удаление технического дубля не изменяет raw.
+
+## Replay playbook
+
+1. Зафиксировать затронутые topics, offsets, source versions и временной диапазон.
+2. Остановить публикацию affected data product, не останавливая независимые домены.
+3. Выбрать источник восстановления: Kafka в retention window, Iceberg raw или повторная поставка producer.
+4. Запустить replay в отдельном compute pool с исходными schema и RDM versions.
+5. Пересобрать standardized и curated только для затронутых партиций.
+6. Загрузить DWH stage с новым `batch_id`.
+7. Выполнить record count, финансовую сверку и проверку orphan records.
+8. Создать новый certified snapshot и сохранить связь с заменённой версией.
+9. Опубликовать lineage и результаты инцидента в DataHub.
+
+Replay MDM-события применяет готовую версию golden record. Повторный автоматический match запрещён, иначе результат может отличаться от исходного.
+
+## Workload isolation
+
+| Нагрузка | Приоритет | Ресурс | Правило |
+|---|---|---|---|
+| Daily certification P09 | Критический | Отдельный Airflow pool и гарантированный compute | Не вытесняется backfill, compaction и ad-hoc |
+| Financial CDC P03 | Критический | Выделенные consumers и Kafka partitions | Lag контролируется отдельно по домену |
+| Card events P04 | Высокий | Отдельные topics и streaming workers при росте | Hot partition не должен задерживать Core и Loans |
+| Iceberg maintenance | Высокий | Maintenance pool | Compaction hot partitions завершается до тяжёлых Trino-запросов |
+| Historical backfill P08 | Низкий | Ограниченный backfill pool | Автоматически приостанавливается при риске нарушения daily SLA |
+| Data Science / ad-hoc | Низкий | Trino resource group | Имеет quota, timeout и concurrency limit |
+
+## Продвижение архивов
+
+Архив не должен оставаться в raw без понятного статуса:
+
+1. **Registered:** создан manifest, назначены owner, период и классификация.
+2. **Validated:** подтверждены checksum, record count, кодировка и schema.
+3. **Standardized:** применены канонические типы, время и справочники.
+4. **Reconciled:** финансовые суммы сверены с контрольным источником.
+5. **Curated:** набор прошёл доменные проверки и получил data contract.
+6. **Certified:** набор разрешён для отчётности с зафиксированным snapshot.
+
+Набор без достаточного lineage может использоваться для исследования, но не для сертифицированной или регуляторной публикации.
+
+## SLO обслуживания потоков
+
+| Сигнал | Триггер | Реакция |
+|---|---|---|
+| Kafka consumer lag | Выше двукратного SLA несколько окон подряд | • Scale-out consumers<br><br>• Проверка hot keys<br><br>• Изоляция topic |
+| DLQ финансового потока | Рост выше утверждённой доли дневного объёма | • Остановить publication<br><br>• Исправить schema или producer<br><br>• Replay и reconciliation |
+| Compaction lag | Maintenance не завершается до critical read window | • Увеличить pool<br><br>• Приоритизировать hot partitions<br><br>• Увеличить micro-batch |
+| Backfill pressure | Daily batch использует более 70% окна | • Приостановить P08<br><br>• Освободить compute<br><br>• Перенести backfill |
+| MDM queue | Backlog выше суточной мощности | • Остановить bulk ingestion<br><br>• Перейти к incremental matching<br><br>• Увеличить worker и Steward capacity |

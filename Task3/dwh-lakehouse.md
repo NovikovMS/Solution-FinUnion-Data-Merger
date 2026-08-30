@@ -86,3 +86,57 @@ Trino не используется для транзакционных кома
 ## Критерий размещения нового набора
 
 Набор помещается в DWH, если имеет стабильную схему, требуется для повторяемой отчётности и укладывается в контролируемый объём. Набор помещается в Lakehouse, если требуется полная история, высокая гранулярность, schema evolution, повторная обработка или data science. Один набор может существовать в обоих слоях, если curated Iceberg является детальным источником, а DWH — сертифицированной проекцией с явным lineage.
+
+## Архитектурный запас на 3–5 лет
+
+Целевая платформа на 12 месяцев не требует немедленного внедрения отдельного MPP DWH или нескольких Lakehouse-кластеров. Она должна сохранять возможность такого развития без изменения канонической модели и data contracts.
+
+| Область | Базовое состояние на 12 месяцев | Опциональное развитие при росте |
+|---|---|---|
+| Certified DWH | PostgreSQL хранит сертифицированные факты, измерения и витрины | • Read replicas для BI<br><br>• Rolling hot window<br><br>• Агрегаты вместо полной детализации<br><br>• Columnar/MPP при подтверждённом пределе |
+| Историческая детализация | Iceberg curated хранит полную историю | • Разделение compute pools по доменам<br><br>• Monthly cold partitions<br><br>• Предрасчёт популярных data products |
+| Object Storage | Raw, curated, документы и архивы используют общий lifecycle по классам | • Hot/warm/cold tiers<br><br>• Раздельные buckets и ключи по доменам<br><br>• Legal hold registry |
+| Trino | Resource groups разделяют BI, Risk и Data Science | • Независимые coordinator/worker pools<br><br>• Autoscaling<br><br>• Query routing и materialized datasets |
+| Iceberg Catalog | Единый отказоустойчивый catalog управляет таблицами | • Репликация metadata<br><br>• Разделение namespaces<br><br>• Отдельные catalogs по зонам доверия при необходимости |
+
+## Hot/cold политика
+
+1. PostgreSQL хранит период, который регулярно нужен BI и отчётности.
+2. Полная история остаётся в Iceberg curated и доступна через Trino.
+3. Закрытый период удаляется из PostgreSQL только после проверки Iceberg snapshot, lineage и возможности воспроизведения.
+4. Представление или semantic layer скрывает от consumer физическую границу hot/cold.
+5. Regulatory snapshot хранит идентификаторы версии DWH batch, Iceberg snapshot и справочников.
+6. Legal hold блокирует lifecycle независимо от стоимости.
+
+Длительность hot window не фиксируется заранее. Она выбирается по профилю запросов, срокам отчётности, стоимости и результатам нагрузочного тестирования.
+
+## SLO обслуживания Iceberg
+
+| Метрика | Нормальное состояние | Триггер | Действие |
+|---|---|---|---|
+| Files per table | Стабильно около post-compaction baseline | Рост более чем в два раза | • Внеплановая compaction<br><br>• Проверка micro-batch window<br><br>• Ограничение commit frequency |
+| Average file size | В целевом диапазоне, определённом нагрузочным тестом | Устойчивое снижение ниже диапазона | • Увеличить batch<br><br>• Объединить writers<br><br>• Настроить adaptive flush |
+| Compaction lag | Maintenance завершается до критических запросов | Job не укладывается в maintenance window | • Выделить compute pool<br><br>• Приоритизировать hot partitions<br><br>• Пересмотреть partitioning |
+| Snapshot count | Соответствует retention policy | Метаданные растут быстрее объёма данных | • Snapshot expiration<br><br>• Orphan file cleanup<br><br>• Проверка зависимых tags/branches |
+| Trino planning p95 | Стабилен при сопоставимом scan volume | Растёт быстрее объёма чтения | • Проверить manifests и file count<br><br>• Compaction<br><br>• Partition evolution |
+
+## Workload isolation
+
+- ежедневная сертификация DWH получает гарантированный Airflow pool и compute quota.
+- backfill и архивные загрузки используют отдельный pool и могут быть приостановлены.
+- Trino разделяет regulatory, BI, Risk и ad-hoc через resource groups.
+- compaction не конкурирует с Publication Gate за один и тот же лимит compute.
+- карточные события могут получить отдельные Kafka topics и streaming workers.
+- FinOps измеряет стоимость по data product и домену.
+
+## Решение о структурном масштабировании
+
+Columnar/MPP или облачный warehouse рассматривается, если одновременно подтверждены:
+
+- PostgreSQL после hot/cold и read replicas не укладывается в batch window.
+- p95 критических BI-запросов превышает SLO.
+- вертикальное масштабирование не даёт требуемого резерва или экономически нецелесообразно.
+- эксплуатационная команда готова поддерживать новый certified-слой.
+- пилот подтверждает воспроизводимость сверки, SCD, security и lineage.
+
+Если условия не выполнены, PostgreSQL сохраняется. Горизонт 3–5 лет является периодом наблюдения и принятия решений, а не обязательным сроком замены.

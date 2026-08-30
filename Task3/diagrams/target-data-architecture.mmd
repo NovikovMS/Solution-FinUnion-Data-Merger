@@ -20,6 +20,7 @@ flowchart TB
         API["API Gateway / синхронные API"]
         KAFKA["Kafka / события"]
         INGEST["CDC и batch ingestion"]
+        REGISTRY["Schema Registry"]
     end
 
     subgraph platform["Data Platform"]
@@ -30,12 +31,14 @@ flowchart TB
         CURATED["Iceberg Curated"]
         TRINO["Trino SQL"]
         DWH["PostgreSQL DWH"]
+        ICEBERG_CATALOG["Iceberg Catalog / all zones"]
     end
 
     subgraph orchestration["Оркестрация и governance"]
         direction LR
         AIRFLOW["Airflow"]
         QUALITY["Data Quality / Publication Gate"]
+        MAINTENANCE["Iceberg Table Maintenance / all zones"]
         METADATA["Metadata & Lineage Events"]
         DATAHUB["DataHub"]
     end
@@ -72,9 +75,12 @@ flowchart TB
 
     KAFKA --> RAW
     INGEST --> RAW
+    REGISTRY -.-> KAFKA
+    REGISTRY -.-> INGEST
     OBJECTS --> RAW
     RAW --> STANDARD
     STANDARD --> CURATED
+    ICEBERG_CATALOG -.-> CURATED
     CURATED --> TRINO
     CURATED --> QUALITY
     QUALITY --> DWH
@@ -84,8 +90,12 @@ flowchart TB
     AIRFLOW -.-> STANDARD
     AIRFLOW -.-> CURATED
     AIRFLOW -.-> DWH
+    AIRFLOW -.-> MAINTENANCE
+    MAINTENANCE -.-> CURATED
 
     KAFKA -.-> METADATA
+    REGISTRY -.-> METADATA
+    ICEBERG_CATALOG -.-> METADATA
     AIRFLOW -.-> METADATA
     CURATED -.-> METADATA
     DWH -.-> METADATA

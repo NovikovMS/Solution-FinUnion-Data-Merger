@@ -60,3 +60,31 @@
 - эксплуатационные владельцы Kafka, Airflow, Iceberg, Trino и PostgreSQL.
 - доменные Owners и Stewards с измеримыми SLA.
 - разграничение ресурсов интерактивной аналитики, batch и регуляторных расчётов.
+
+## Архитектурный запас после 12 месяцев
+
+Выбор гибрида не означает обязательную замену компонентов через несколько лет. На горизонте 3–5 лет проверяется, сохраняет ли платформа запас по SLA, стоимости и качеству.
+
+| Компонент | Остаётся без изменений, если | Вариант развития при достижении триггера |
+|---|---|---|
+| PostgreSQL DWH | • Загрузка укладывается в окно<br><br>• BI p95 стабилен<br><br>• Есть запас CPU, IO и storage<br><br>• Регуляторные расчёты не конкурируют с BI | • Read replicas<br><br>• Rolling hot window<br><br>• Агрегированные marts<br><br>• Columnar/MPP certified-слой |
+| Iceberg Lakehouse | • Compaction успевает за ingestion<br><br>• Planning time Trino стабилен<br><br>• Стоимость соответствует росту бизнеса | • Adaptive micro-batch<br><br>• Partition evolution<br><br>• Storage tiering<br><br>• Отдельные compute pools |
+| Kafka | • Consumer lag остаётся в SLA<br><br>• Replay укладывается в recovery window<br><br>• Нет устойчивых hot partitions | • Разделение кластеров или topics по доменам<br><br>• Tiered retention<br><br>• Выделенный Stream Processor |
+| Airflow | • Критические DAG укладываются в batch window<br><br>• Backfill не вытесняет ежедневную загрузку | • Отдельные pools и namespaces<br><br>• Параллельная сертификация доменов<br><br>• Выделенный compute для backfill |
+| MDM | • Match/merge очередь обрабатывается быстрее поступления<br><br>• False merge находится ниже порога | • Incremental matching<br><br>• Дополнительные blocking strategies<br><br>• Горизонтальное масштабирование workers<br><br>• Разделение customer и counterparty matching |
+| DataHub | • Critical lineage полный и актуальный<br><br>• Новые assets получают owner автоматически | • Lineage-as-code<br><br>• Contract gates в CI/CD<br><br>• Tiered governance для critical и experimental assets |
+
+## Когда PostgreSQL перестаёт быть достаточным
+
+Переход к columnar/MPP рассматривается только после подтверждения, что оптимизации PostgreSQL не возвращают требуемый запас.
+
+Последовательность решения:
+
+1. Проверить планы запросов, partition pruning, индексы, bloat и настройку autovacuum.
+2. Вынести BI-чтение на replicas и отделить его от загрузки.
+3. Оставить в PostgreSQL ограниченное hot window и агрегаты.
+4. Перенести историческую детализацию в Iceberg с доступом через Trino.
+5. Провести нагрузочный тест на целевом профиле.
+6. Только при сохранении ограничения выбрать columnar/MPP, не меняя контракты data products и Publication Gate.
+
+Сам календарный срок не является основанием миграции. Решение принимается по измеренному исчерпанию ёмкости, окна загрузки или допустимой стоимости.

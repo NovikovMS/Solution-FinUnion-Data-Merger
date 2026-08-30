@@ -58,3 +58,38 @@ Data product — не копия таблицы и не произвольная
 ## Почему это не полный Data Mesh
 
 Команды используют доменное владение и data as a product, но не создают отдельную инфраструктуру в каждом домене. Общие стандарты идентификаторов, безопасности, каталогизации, ingestion и хранения централизованы. Это снижает стоимость и риск расхождения терминов, пока объединённая организация формирует устойчивые доменные команды.
+
+## Уровни публикации
+
+| Уровень | Назначение | Гарантии | Разрешённые потребители |
+|---|---|---|---|
+| Provisional | Оперативные и near-line сценарии до завершения полной сверки | • Freshness по событийным SLA<br><br>• Schema и validity checks<br><br>• Явный `as_of_timestamp`<br><br>• Нет статуса регуляторной сертификации | • Customer Service<br><br>• Anti-fraud<br><br>• Intraday Risk<br><br>• Оперативный мониторинг |
+| Certified | Управленческая и обязательная отчётность | • Полная доменная сверка<br><br>• Publication Gate<br><br>• `report_snapshot_id`<br><br>• Point-in-time lineage<br><br>• Подтверждение владельца | • BI<br><br>• Finance<br><br>• Regulatory Reporting<br><br>• Официальные метрики |
+| Archived | Воспроизведение закрытых периодов и аудит | • Неизменяемый snapshot<br><br>• Retention policy<br><br>• Версии MDM/RDM<br><br>• Manifest и checksum | • Audit<br><br>• Regulatory investigation<br><br>• Контролируемый historical research |
+
+Provisional не считается менее качественной копией. Это отдельный интерфейс с более высокой свежестью и ограниченной гарантией завершённости. Consumer не должен сравнивать provisional и certified без учёта `as_of_timestamp` и business date.
+
+## Freshness и certification SLO
+
+| Data product | Operational freshness | Analytical certification | Правило использования |
+|---|---|---|---|
+| Customer 360 | Golden-record event до 5 минут после решения MDM | Ежедневный сертифицированный срез | CRM использует operational API/event.<br><br>BI использует certified snapshot |
+| Accounts & Balances | CDC до 5 минут для изменения счёта | Daily EOD snapshot после ledger reconciliation | Intraday остаток является provisional.<br><br>Официальный остаток привязан к business date |
+| Payments & Transactions | CDC/event до 5 минут | После сверки платежей и ledger по бизнес-дате | Customer Service видит статус near-line.<br><br>Finance использует certified fact |
+| Cards Portfolio | События до 2 минут | После клиринговой сверки | Anti-fraud работает с provisional events.<br><br>Finance использует cleared certified набор |
+| Loan Portfolio | Изменения до 15 минут | Daily snapshot после сверки графика, выдач и погашений | Intraday Risk видит provisional.<br><br>Регуляторная отчётность использует certified snapshot |
+
+Эти значения согласуют высокую оперативную свежесть с отдельным окном сертификации. Нарушение freshness не делает последний certified snapshot недействительным, но отображается consumer как задержка.
+
+## Масштабирование владения
+
+На горизонте дальнейшего роста ownership масштабируется без создания отдельной платформы в каждом домене:
+
+- DataHub автоматически назначает технического owner по repository и Airflow tags.
+- Contract checks блокируют несовместимый выпуск до production.
+- critical data products имеют более строгий lineage и certification gate.
+- experimental products используют общий self-service шаблон с ограниченными ресурсами.
+- стоимость storage и compute маркируется по data product и домену.
+- доменная команда получает quota, но не может обойти общие требования безопасности.
+
+Если число consumers или объём продукта растёт, сначала масштабируется его compute и storage quota. Физическое разделение платформы рассматривается только при устойчивой изоляционной, регуляторной или производительной потребности.

@@ -1,0 +1,44 @@
+flowchart TB
+    TARGET["Целевая платформа через 12 месяцев"]
+    SIGNALS{"Есть устойчивое нарушение SLA,<br/>ёмкости, качества или FinOps-коридора?"}
+    KEEP["Сохранить текущую архитектуру<br/>и продолжать мониторинг"]
+    BOTTLENECK{"Где подтверждено<br/>ограничение?"}
+
+    INGEST["Ingestion / Kafka"]
+    STORAGE["Iceberg / Object Storage"]
+    SERVING["PostgreSQL / Trino / BI"]
+    GOVERNANCE["MDM / DataHub / Governance"]
+
+    INGEST_ACTION["Scale-out consumers<br/>Topic isolation<br/>Stream Processor при необходимости"]
+    STORAGE_ACTION["Adaptive compaction<br/>Partition evolution<br/>Hot / cold tiering"]
+    SERVING_ACTION["Read replicas и агрегаты<br/>Rolling hot window<br/>Columnar / MPP при исчерпании PostgreSQL"]
+    GOVERNANCE_ACTION["Incremental matching<br/>Lineage-as-code<br/>Автоматические contract gates"]
+
+    VERIFY["Нагрузочный тест<br/>Reconciliation<br/>Проверка стоимости и DR"]
+    DECISION{"Целевые показатели<br/>восстановлены?"}
+    ADOPT["Закрепить изменение<br/>в архитектурном решении"]
+    REVIEW["Пересмотреть гипотезу<br/>и следующий bottleneck"]
+
+    TARGET --> SIGNALS
+    SIGNALS -->|"Нет"| KEEP
+    SIGNALS -->|"Да"| BOTTLENECK
+
+    BOTTLENECK --> INGEST
+    BOTTLENECK --> STORAGE
+    BOTTLENECK --> SERVING
+    BOTTLENECK --> GOVERNANCE
+
+    INGEST --> INGEST_ACTION
+    STORAGE --> STORAGE_ACTION
+    SERVING --> SERVING_ACTION
+    GOVERNANCE --> GOVERNANCE_ACTION
+
+    INGEST_ACTION --> VERIFY
+    STORAGE_ACTION --> VERIFY
+    SERVING_ACTION --> VERIFY
+    GOVERNANCE_ACTION --> VERIFY
+
+    VERIFY --> DECISION
+    DECISION -->|"Да"| ADOPT
+    DECISION -->|"Нет"| REVIEW
+    REVIEW --> BOTTLENECK

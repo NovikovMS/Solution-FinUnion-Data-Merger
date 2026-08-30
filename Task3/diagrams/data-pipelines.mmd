@@ -13,6 +13,8 @@ flowchart TB
         KAFKA["Kafka"]
         CDC["CDC Connectors"]
         FILES["Managed File Ingestion"]
+        REGISTRY["Schema Registry"]
+        STREAM["Stream Processor при необходимости"]
     end
 
     subgraph lakehouse["Iceberg Lakehouse"]
@@ -20,6 +22,7 @@ flowchart TB
         RAW["Raw"]
         STANDARD["Standardized"]
         CURATED["Curated"]
+        ICEBERG_CATALOG["Iceberg Catalog / all zones"]
     end
 
     subgraph serving["Serving"]
@@ -34,6 +37,7 @@ flowchart TB
         direction LR
         AIRFLOW["Airflow"]
         QUALITY["Data Quality Gate"]
+        MAINTENANCE["Table Maintenance / all zones"]
         DATAHUB["DataHub"]
     end
 
@@ -46,13 +50,19 @@ flowchart TB
 
     CDC --> RAW
     KAFKA --> RAW
+    KAFKA -.-> STREAM
+    STREAM -.-> RAW
     FILES --> RAW
+    REGISTRY -.-> KAFKA
+    REGISTRY -.-> CDC
 
     RAW --> STANDARD
     STANDARD --> CURATED
+    ICEBERG_CATALOG -.-> CURATED
     CURATED --> QUALITY
     QUALITY --> DWH
-    CURATED --> TRINO
+    CURATED -->|"provisional"| TRINO
+    QUALITY -.->|"certified marker"| TRINO
 
     DWH --> BI
     TRINO --> DS
@@ -62,9 +72,13 @@ flowchart TB
     AIRFLOW -.-> STANDARD
     AIRFLOW -.-> CURATED
     AIRFLOW -.-> DWH
+    AIRFLOW -.-> MAINTENANCE
+    MAINTENANCE -.-> CURATED
 
     CDC -.-> DATAHUB
     KAFKA -.-> DATAHUB
+    REGISTRY -.-> DATAHUB
+    ICEBERG_CATALOG -.-> DATAHUB
     AIRFLOW -.-> DATAHUB
     CURATED -.-> DATAHUB
     DWH -.-> DATAHUB
