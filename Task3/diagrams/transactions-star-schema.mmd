@@ -1,0 +1,113 @@
+erDiagram
+    direction TB
+
+    FACT_TRANSACTION["Факт операции"] {
+        bigint transaction_sk PK
+        string transaction_id
+        string payment_id
+        bigint customer_sk FK
+        bigint account_sk FK
+        bigint product_sk FK
+        bigint counterparty_sk FK
+        bigint card_sk FK
+        bigint channel_sk FK
+        bigint currency_sk FK
+        bigint business_date_sk FK
+        bigint source_system_sk FK
+        datetime event_timestamp
+        datetime posting_timestamp
+        string debit_credit
+        decimal amount
+        string status
+        boolean is_reversal
+        string original_transaction_id
+        string load_batch_id
+    }
+
+    DIM_CUSTOMER["Измерение клиента"] {
+        bigint customer_sk PK
+        uuid customer_id
+        string customer_type
+        string segment
+        string residency
+        datetime valid_from
+        datetime valid_to
+        boolean is_current
+    }
+
+    DIM_ACCOUNT["Измерение счёта"] {
+        bigint account_sk PK
+        uuid account_id
+        string account_type
+        string status
+        date opened_date
+        date closed_date
+        datetime valid_from
+        datetime valid_to
+    }
+
+    DIM_PRODUCT["Измерение продукта"] {
+        bigint product_sk PK
+        uuid product_id
+        string product_code
+        string product_group
+        string tariff_version
+        datetime valid_from
+        datetime valid_to
+    }
+
+    DIM_COUNTERPARTY["Измерение контрагента"] {
+        bigint counterparty_sk PK
+        uuid counterparty_id
+        string counterparty_type
+        string country_code
+        string risk_group
+    }
+
+    DIM_CARD["Измерение карты"] {
+        bigint card_sk PK
+        uuid card_id
+        string payment_system
+        string card_type
+        string status
+    }
+
+    DIM_CHANNEL["Измерение канала"] {
+        bigint channel_sk PK
+        string channel_code
+        string channel_name
+        string channel_group
+    }
+
+    DIM_CURRENCY["Измерение валюты"] {
+        bigint currency_sk PK
+        string currency_code
+        string currency_name
+    }
+
+    DIM_DATE["Измерение даты"] {
+        bigint date_sk PK
+        date calendar_date
+        int day
+        int month
+        int quarter
+        int year
+        boolean is_business_day
+    }
+
+    DIM_SOURCE["Измерение источника"] {
+        bigint source_system_sk PK
+        string source_system_code
+        string source_domain
+        string organization
+    }
+
+    DIM_CUSTOMER ||--o{ FACT_TRANSACTION : "клиент"
+    DIM_ACCOUNT ||--o{ FACT_TRANSACTION : "счёт"
+    DIM_PRODUCT ||--o{ FACT_TRANSACTION : "продукт"
+    DIM_COUNTERPARTY ||--o{ FACT_TRANSACTION : "контрагент"
+    DIM_CARD |o--o{ FACT_TRANSACTION : "карта"
+    DIM_CHANNEL ||--o{ FACT_TRANSACTION : "канал"
+    DIM_CURRENCY ||--o{ FACT_TRANSACTION : "валюта"
+    DIM_DATE ||--o{ FACT_TRANSACTION : "бизнес-дата"
+    DIM_SOURCE ||--o{ FACT_TRANSACTION : "источник"

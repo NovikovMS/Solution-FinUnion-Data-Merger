@@ -1,0 +1,51 @@
+flowchart TB
+    Mobilization["Month 1 | Mobilization and governance"]
+    Discovery["Months 1-2 | Critical data discovery"]
+    Gate0{"G0 | Scope approved"}
+    Foundation["Months 1-2 | MVP foundation<br/>Airflow, PostgreSQL DWH, minimal MDM"]
+    Interim["Months 2-3 | Interim MVP<br/>global customer ID, P01 DWH, BI and DQ"]
+    Gate1{"G1 | Interim MVP accepted"}
+    MasterData["Months 3-6 | Industrialize MDM, RDM and Product Catalog"]
+    Ingestion["Months 3-6 | Kafka, CDC, files and Lakehouse"]
+    Gate2{"G2 | Target data foundation ready"}
+    Analytics["Months 4-8 | Expand DWH and analytical products"]
+    DomainWaves["Months 6-9 | Domain migration waves"]
+    Gate3{"G3 | Product certified"}
+    Reporting["Months 8-10 | BI and near-line reporting"]
+    Rehearsal["Months 8-10 | Cutover rehearsal"]
+    Gate4{"G4 | Cutover Go or No-Go"}
+    Cutover["Months 9-11 | Cutover and legacy isolation"]
+    Stabilization["Months 10-12 | Stabilization and BAU handover"]
+    Gate5{"G5 | Decommission approved"}
+    Decommission["Months 10-12 | Legacy decommission by flow"]
+    Target["Month 12 | Target state accepted"]
+
+    Mobilization --> Discovery
+    Discovery --> Gate0
+    Gate0 --> Foundation
+    Foundation --> Interim
+    Interim --> Gate1
+    Gate1 --> MasterData
+    Gate1 --> Ingestion
+    Gate1 --> Analytics
+    MasterData --> Gate2
+    Ingestion --> Gate2
+    Gate2 --> DomainWaves
+    Analytics --> DomainWaves
+    DomainWaves --> Gate3
+    Gate3 --> Reporting
+    Gate3 --> Rehearsal
+    Reporting --> Gate4
+    Rehearsal --> Gate4
+    Gate4 --> Cutover
+    Cutover --> Stabilization
+    Stabilization --> Gate5
+    Gate5 --> Decommission
+    Decommission --> Target
+
+    Gate0 -.->|"No-Go"| Discovery
+    Gate1 -.->|"No-Go"| Interim
+    Gate2 -.->|"No-Go"| MasterData
+    Gate3 -.->|"No-Go"| DomainWaves
+    Gate4 -.->|"No-Go"| Rehearsal
+    Gate5 -.->|"No-Go"| Stabilization

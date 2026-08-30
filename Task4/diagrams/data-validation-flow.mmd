@@ -1,0 +1,39 @@
+flowchart TB
+    SourceCut["Source snapshot and watermarks"]
+    Baseline["Baseline profile and control totals"]
+    RawChecks["Delivery checks: count, checksum, offsets"]
+    StructureChecks["Schema, type and format checks"]
+    SemanticChecks["Business rules and RDM mapping"]
+    IntegrityChecks["Uniqueness, relationships and temporal checks"]
+    DomainChecks["MDM, financial, consent and security checks"]
+    AnalyticsChecks["KPI, distributions and business acceptance"]
+    Decision{"Validation result"}
+    Pass["Pass: allow certification or cutover"]
+    Conditional["Conditional Pass: owner, SLA and limitation"]
+    Quarantine["Fail: quarantine and publication block"]
+    Steward["Data Steward triage"]
+    Producer["Producer fixes root cause"]
+    Replay["Controlled replay with the same rule version"]
+    Evidence["DataHub evidence and audit"]
+
+    SourceCut --> Baseline
+    Baseline --> RawChecks
+    RawChecks --> StructureChecks
+    StructureChecks --> SemanticChecks
+    SemanticChecks --> IntegrityChecks
+    IntegrityChecks --> DomainChecks
+    DomainChecks --> AnalyticsChecks
+    AnalyticsChecks --> Decision
+
+    Decision -->|"Pass"| Pass
+    Decision -->|"Conditional Pass"| Conditional
+    Decision -->|"Fail"| Quarantine
+
+    Quarantine --> Steward
+    Steward --> Producer
+    Producer --> Replay
+    Replay --> StructureChecks
+
+    Pass --> Evidence
+    Conditional --> Evidence
+    Quarantine --> Evidence

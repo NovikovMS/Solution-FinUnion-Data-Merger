@@ -1,0 +1,42 @@
+sequenceDiagram
+    autonumber
+    actor Board as Cutover Board
+    participant FU as FU CRM
+    participant RB as RB CRM
+    participant INT as Integration Layer
+    participant MDM as MDM Customer Hub
+    participant CON as Canary Consumers
+    participant OBS as Monitoring
+
+    Board->>FU: Enable limited freeze
+    Board->>RB: Enable limited freeze
+    Board->>MDM: Freeze rules and create snapshot
+    FU->>INT: Final delta and watermark
+    RB->>INT: Final delta and watermark
+    INT->>MDM: Idempotent delta load
+    MDM->>MDM: Match, merge and survivorship
+    MDM-->>Board: Reconciliation evidence
+
+    alt Hard gates are green
+        Board->>INT: Enable canary route
+        CON->>INT: Customer identity request
+        INT->>MDM: Read golden record
+        MDM-->>CON: Global ID and source links
+        CON-->>OBS: Smoke-test metrics
+        OBS-->>Board: Canary is healthy
+        Board->>INT: Enable full production route
+        FU->>INT: New customer change
+        RB->>INT: New customer change
+        INT->>MDM: Continuous events
+        MDM-->>CON: Golden-record events
+        OBS-->>Board: Hypercare status
+        Board->>FU: Release freeze
+        Board->>RB: Release freeze
+    else No-Go or rollback trigger
+        Board->>INT: Stop golden-record publication
+        INT->>CON: Restore previous read route
+        FU->>INT: Continue journaling changes
+        RB->>INT: Continue journaling changes
+        Board->>MDM: Preserve evidence and undo defective merges
+        OBS-->>Board: Reconciliation backlog
+    end

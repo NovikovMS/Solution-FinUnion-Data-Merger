@@ -1,0 +1,84 @@
+flowchart TB
+    subgraph producers["Источники"]
+        direction LR
+        OLTP["Core · Cards · Loans"]
+        CRM["CRM"]
+        MASTER["MDM · RDM · Product Catalog"]
+        DOCS["Document Management"]
+        ARCHIVE["FU/RB архивы"]
+    end
+
+    subgraph ingestion["Ingestion"]
+        direction LR
+        KAFKA["Kafka"]
+        CDC["CDC Connectors"]
+        FILES["Managed File Ingestion"]
+        REGISTRY["Schema Registry"]
+        STREAM["Stream Processor при необходимости"]
+    end
+
+    subgraph lakehouse["Iceberg Lakehouse"]
+        direction LR
+        RAW["Raw"]
+        STANDARD["Standardized"]
+        CURATED["Curated"]
+        ICEBERG_CATALOG["Iceberg Catalog / all zones"]
+    end
+
+    subgraph serving["Serving"]
+        direction LR
+        DWH["PostgreSQL DWH"]
+        TRINO["Trino"]
+        BI["BI / Reporting"]
+        DS["Risk / Anti-fraud"]
+    end
+
+    subgraph control["Управление"]
+        direction LR
+        AIRFLOW["Airflow"]
+        QUALITY["Data Quality Gate"]
+        MAINTENANCE["Table Maintenance / all zones"]
+        DATAHUB["DataHub"]
+    end
+
+    OLTP --> CDC
+    OLTP --> KAFKA
+    CRM --> KAFKA
+    MASTER --> KAFKA
+    DOCS --> FILES
+    ARCHIVE --> FILES
+
+    CDC --> RAW
+    KAFKA --> RAW
+    KAFKA -.-> STREAM
+    STREAM -.-> RAW
+    FILES --> RAW
+    REGISTRY -.-> KAFKA
+    REGISTRY -.-> CDC
+
+    RAW --> STANDARD
+    STANDARD --> CURATED
+    ICEBERG_CATALOG -.-> CURATED
+    CURATED --> QUALITY
+    QUALITY --> DWH
+    CURATED -->|"provisional"| TRINO
+    QUALITY -.->|"certified marker"| TRINO
+
+    DWH --> BI
+    TRINO --> DS
+
+    AIRFLOW -.-> FILES
+    AIRFLOW -.-> RAW
+    AIRFLOW -.-> STANDARD
+    AIRFLOW -.-> CURATED
+    AIRFLOW -.-> DWH
+    AIRFLOW -.-> MAINTENANCE
+    MAINTENANCE -.-> CURATED
+
+    CDC -.-> DATAHUB
+    KAFKA -.-> DATAHUB
+    REGISTRY -.-> DATAHUB
+    ICEBERG_CATALOG -.-> DATAHUB
+    AIRFLOW -.-> DATAHUB
+    CURATED -.-> DATAHUB
+    DWH -.-> DATAHUB

@@ -1,0 +1,100 @@
+@startuml
+title FinUnion + RetailBank AS-IS
+
+actor "Клиент" as Client
+actor "Сотрудник банка" as Employee
+actor "Финансовый аналитик" as Analyst
+actor "Регулятор" as Regulator
+
+rectangle "FinUnion" {
+  component "FU CRM" as FU_CRM
+  component "FU Core Banking" as FU_Core
+  component "FU Cards" as FU_Cards
+  component "FU Loans" as FU_Loans
+  database "FU DWH" as FU_DWH
+  database "FU Data Lake" as FU_DataLake
+  component "FU BI" as FU_BI
+  component "FU ESB" as FU_ESB
+}
+
+rectangle "RetailBank" {
+  component "RB CRM" as RB_CRM
+  component "RB Core Banking" as RB_Core
+  component "RB Cards" as RB_Cards
+  component "RB Loans" as RB_Loans
+  database "RB DWH" as RB_DWH
+  component "RB BI" as RB_BI
+  component "Point-to-point integrations" as RB_P2P
+}
+
+Client --> FU_CRM : обращения и данные клиента
+Client --> RB_CRM : обращения и данные клиента
+
+Employee --> FU_CRM : работа с клиентом
+Employee --> RB_CRM : работа с клиентом
+
+FU_CRM --> FU_Core : данные клиента и договоры
+FU_CRM --> FU_Loans : заявки и данные заёмщика
+FU_Core --> FU_Cards : счета и карты
+FU_Core --> FU_Loans : счета, платежи, договоры
+FU_Core --> FU_DWH : batch-выгрузки
+FU_Cards --> FU_DWH : карточные операции
+FU_Loans --> FU_DWH : кредитный портфель
+FU_CRM --> FU_DataLake : документы и события
+FU_Core --> FU_DataLake : исторические выгрузки
+FU_Cards --> FU_DataLake : события карточных операций
+FU_Loans --> FU_DataLake : кредитная история и события
+FU_DWH --> FU_BI : витрины
+
+RB_CRM --> RB_Core : данные клиента и договоры
+RB_CRM --> RB_Loans : заявки и данные заёмщика
+RB_Core --> RB_Cards : счета и карты
+RB_Core --> RB_Loans : счета, платежи, договоры
+RB_Core --> RB_DWH : batch-выгрузки
+RB_Cards --> RB_DWH : карточные операции
+RB_Loans --> RB_DWH : кредитный портфель
+RB_DWH --> RB_BI : витрины
+
+Analyst --> FU_BI : отчёты FinUnion
+Analyst --> RB_BI : отчёты RetailBank
+
+FU_DWH --> Regulator : отчётность
+RB_DWH --> Regulator : отчётность
+
+FU_ESB ..> FU_CRM
+FU_ESB ..> FU_Core
+FU_ESB ..> FU_Cards
+FU_ESB ..> FU_Loans
+RB_P2P ..> RB_CRM
+RB_P2P ..> RB_Core
+RB_P2P ..> RB_Cards
+RB_P2P ..> RB_Loans
+
+note right of FU_CRM
+  Клиентские данные частично
+  дублируются с RB CRM
+end note
+
+note right of RB_DWH
+  Отчётность считается отдельно,
+  метрики не совпадают
+end note
+
+note bottom of RB_P2P
+  Много точечных интеграций,
+  нет централизованного управления потоками
+end note
+
+note bottom of FU_DataLake
+  Data Lake есть только частично:
+  нет единого каталога, lineage
+  и правил качества данных
+end note
+
+note bottom of RB_DWH
+  У RetailBank нет Data Lake,
+  исторические и аналитические данные
+  хранятся в RB DWH и выгрузках
+end note
+
+@enduml

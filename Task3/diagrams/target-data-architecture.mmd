@@ -1,0 +1,108 @@
+flowchart TB
+    subgraph operational["Operational Systems"]
+        direction LR
+        CRM["CRM / Customer Case"]
+        CORE["Core Banking / Payments"]
+        CARDS["Card Management"]
+        LOANS["Loan Management"]
+        DMS["Document Management"]
+    end
+
+    subgraph master["Master Data"]
+        direction LR
+        MDM["MDM Customer Hub"]
+        RDM["Reference Data Management"]
+        PRODUCT["Product Catalog"]
+    end
+
+    subgraph integration["Integration Layer"]
+        direction LR
+        API["API Gateway / синхронные API"]
+        KAFKA["Kafka / события"]
+        INGEST["CDC и batch ingestion"]
+        REGISTRY["Schema Registry"]
+    end
+
+    subgraph platform["Data Platform"]
+        direction LR
+        OBJECTS["Object Storage"]
+        RAW["Iceberg Raw"]
+        STANDARD["Iceberg Standardized"]
+        CURATED["Iceberg Curated"]
+        TRINO["Trino SQL"]
+        DWH["PostgreSQL DWH"]
+        ICEBERG_CATALOG["Iceberg Catalog / all zones"]
+    end
+
+    subgraph orchestration["Оркестрация и governance"]
+        direction LR
+        AIRFLOW["Airflow"]
+        QUALITY["Data Quality / Publication Gate"]
+        MAINTENANCE["Iceberg Table Maintenance / all zones"]
+        METADATA["Metadata & Lineage Events"]
+        DATAHUB["DataHub"]
+    end
+
+    subgraph consumption["Потребители"]
+        direction LR
+        BI["BI / управленческая аналитика"]
+        REGULATORY["Регуляторная отчётность"]
+        DS["Risk / Anti-fraud / Data Science"]
+        DATA_APIS["Data Products / Data APIs"]
+    end
+
+    CRM --> API
+    CORE --> API
+    CARDS --> API
+    LOANS --> API
+
+    CRM --> KAFKA
+    CORE --> KAFKA
+    CARDS --> KAFKA
+    LOANS --> KAFKA
+
+    CORE --> INGEST
+    CARDS --> INGEST
+    LOANS --> INGEST
+    DMS --> OBJECTS
+
+    API <--> MDM
+    API <--> RDM
+    API <--> PRODUCT
+    MDM --> KAFKA
+    RDM --> KAFKA
+    PRODUCT --> KAFKA
+
+    KAFKA --> RAW
+    INGEST --> RAW
+    REGISTRY -.-> KAFKA
+    REGISTRY -.-> INGEST
+    OBJECTS --> RAW
+    RAW --> STANDARD
+    STANDARD --> CURATED
+    ICEBERG_CATALOG -.-> CURATED
+    CURATED --> TRINO
+    CURATED --> QUALITY
+    QUALITY --> DWH
+
+    AIRFLOW -.-> INGEST
+    AIRFLOW -.-> RAW
+    AIRFLOW -.-> STANDARD
+    AIRFLOW -.-> CURATED
+    AIRFLOW -.-> DWH
+    AIRFLOW -.-> MAINTENANCE
+    MAINTENANCE -.-> CURATED
+
+    KAFKA -.-> METADATA
+    REGISTRY -.-> METADATA
+    ICEBERG_CATALOG -.-> METADATA
+    AIRFLOW -.-> METADATA
+    CURATED -.-> METADATA
+    DWH -.-> METADATA
+    METADATA --> DATAHUB
+
+    DWH --> BI
+    DWH --> REGULATORY
+    TRINO --> DS
+    TRINO --> DATA_APIS
+    DWH --> DATA_APIS
