@@ -51,37 +51,41 @@
 
 ## Дорожная карта по периодам
 
-### Месяцы 0–3: Foundation
+### Месяцы 0–3: промежуточный MVP
 
 Внедрить:
 
 - IAM, secrets и encryption baseline.
-- Kafka и Schema Registry.
-- API Gateway.
-- Object Storage и Iceberg Catalog.
-- Airflow с отдельными pools.
-- DataHub.
+- минимальный MDM Customer Hub: глобальный `customer_id`, source links, match/merge и Steward queue.
+- critical RDM cross-mapping и Product Catalog mapping.
+- управляемый Integration Layer для batch и инкрементальных поставок.
+- Airflow и PostgreSQL DWH для P01.
+- stage/certified schemas и минимальные витрины клиентов, счетов, продуктов и операций.
+- минимальный DataHub: owners, critical datasets, качество и lineage source-to-report.
 - Observability и audit.
 
 Проверить:
 
-- synthetic source-to-report flow.
+- full load плюс delta клиента без потери source records.
+- false merge / false non-match и обратимость ошибочного merge.
+- source-to-report flow из FU/RB в certified BI.
+- record count, финансовые суммы, остатки и orphan records.
 - backup/restore.
-- Kafka replay.
-- Iceberg commit и time travel.
-- schema compatibility rejection.
+- идемпотентный повтор P01 batch.
 - field-level masking.
 
-Результат: G1 разрешает production ingestion.
+Результат: G1 принимает обязательный промежуточный результат — единый клиентский идентификатор, временные потоки, DQ-контроль и единую управленческую отчётность. Scope ограничен критичными сущностями; это production MVP, а не полный целевой ландшафт.
 
-### Месяцы 4–6: Master data и ingestion
+### Месяцы 3–6: Industrialization master data, integration и Lakehouse
 
 Внедрить:
 
-- MDM Customer Hub.
-- RDM и Product Catalog.
+- расширенную MDM-модель, survivorship и промышленный Steward workflow.
+- полноценные RDM и Product Catalog вместо critical mapping MVP.
+- Kafka, Schema Registry и API Gateway.
 - CDC connectors.
 - managed file ingestion.
+- Object Storage и Iceberg Catalog.
 - raw, standardized и curated.
 - Data Quality и quarantine.
 - Iceberg table maintenance.
@@ -90,17 +94,19 @@
 
 - initial load плюс delta без gap.
 - MDM split/undo merge.
+- Kafka replay и schema compatibility rejection.
+- Iceberg commit и time travel.
 - archive manifest.
 - compaction и replay на production-like объёме.
 - source-to-curated lineage.
 
-Результат: G2 разрешает dual run доменов.
+Результат: G2 разрешает dual run доменов на целевых CDC/event-потоках. P01 продолжает обслуживать BI, пока соответствующий домен не прошёл переход на curated → DWH.
 
-### Месяцы 7–9: Serving и migration waves
+### Месяцы 4–9: расширение serving и migration waves
 
 Внедрить:
 
-- PostgreSQL DWH.
+- расширение PostgreSQL DWH от четырёх MVP-витрин к conformed dimensions, фактам и портфельным marts.
 - Trino resource groups.
 - Publication Gate.
 - data products и contracts.
@@ -113,7 +119,7 @@
 - lineage-as-code для Customer 360 и Payments & Transactions.
 - automated canary routing для Customer MDM.
 
-Результат: G3 разрешает consumer switch по продукту.
+Результат: G3 разрешает consumer switch по продукту; временный P01 отключается только для домена, прошедшего сверку с целевым P09.
 
 ### Месяцы 10–12: Cutover и stabilization
 
