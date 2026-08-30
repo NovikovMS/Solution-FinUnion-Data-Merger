@@ -104,6 +104,30 @@ Airflow загружает файлы в отдельный raw namespace, пр�
 - DataHub получает lineage от source dataset до data product, DWH-таблицы и BI-витрины.
 - Backfill использует отдельный resource pool и не вытесняет ежедневные критические загрузки.
 
+## Управление карантином
+
+Карантин разделяется по доменам и severity. Для каждой записи автоматически назначаются:
+
+- Domain Data Owner — accountable за итоговое решение.
+- Domain Data Steward — владелец triage, aging и повторной обработки.
+- Producer Owner — исполнитель исправления в источнике или контракте.
+- Platform Team — владелец технической доступности карантина, retention и replay.
+
+Платформенная команда не исправляет бизнес-значение и не разрешает публикацию. Неизменяемый raw payload сохраняется, а исправление поступает новой версией из авторитетного источника.
+
+| Причина | Ответственный за решение | Ответственный за исправление | Условие выхода |
+|---|---|---|---|
+| Нарушение schema contract | Domain Data Steward | Producer Owner | • Совместимая версия схемы<br><br>• Contract test<br><br>• Успешный replay |
+| Неизвестный код RDM | Reference Data Steward и Domain Data Steward | Reference Data Producer или source Producer | • Опубликован mapping либо исправлен source code<br><br>• Версия RDM зафиксирована |
+| Нарушение business rule | Domain Data Owner и Steward | Producer Owner | • Источник исправлен<br><br>• Доменная проверка пройдена |
+| Неоднозначный MDM match | Customer Data Steward | MDM Steward workflow | • Подтверждён merge, split или отдельный global ID<br><br>• Решение аудитируется |
+| Финансовое расхождение | Accounting Data Owner | Producer Owner и Reconciliation Team | • Детальные ключи и суммы сверены<br><br>• Publication Gate разрешён |
+| ПДн, PAN, consent или KYC | Security / Compliance и Domain Data Owner | Producer Owner | • Нарушение устранено<br><br>• Доступ и обработка подтверждены |
+
+Запись без Data Steward и Producer Owner не может перейти в `Ready for replay`. Critical defect блокирует только затронутый data product или партицию, если доказана изоляция от остальных наборов.
+
+DataHub публикует агрегированные метрики карантина без чувствительных значений: объём, aging, owner, severity, причина, доля повторных отказов и влияние на SLO.
+
 ## Exit criteria для промежуточного P01
 
 P01 не должен незаметно стать постоянным прямым ETL из источников в DWH. Его вывод из эксплуатации выполняется по доменам.
