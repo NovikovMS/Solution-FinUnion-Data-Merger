@@ -1,6 +1,7 @@
 # Аналитическая модель Payments & Transactions
 
 Диаграмма: [`diagrams/transactions-star-schema.mmd`](diagrams/transactions-star-schema.mmd).
+![transactions-star-schema.png](diagrams/transactions-star-schema.png)
 
 ## Выбранная модель
 

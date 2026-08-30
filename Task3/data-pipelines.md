@@ -1,6 +1,7 @@
 # Пайплайны данных
 
 Диаграмма: [`diagrams/data-pipelines.mmd`](diagrams/data-pipelines.mmd).
+![data-pipelines.png](diagrams/data-pipelines.png)
 
 ## Каталог пайплайнов
 

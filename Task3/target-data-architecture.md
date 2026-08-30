@@ -1,8 +1,10 @@
 # Целевая архитектура данных
 
 Диаграмма: [`diagrams/target-data-architecture.mmd`](diagrams/target-data-architecture.mmd).
+![target-data-architecture.png](diagrams/target-data-architecture.png)
 
 Дерево решений по дальнейшему росту: [`diagrams/scalability-decisions.mmd`](diagrams/scalability-decisions.mmd).
+![scalability-decisions.png](diagrams/scalability-decisions.png)
 
 ## Архитектурная цель
 
